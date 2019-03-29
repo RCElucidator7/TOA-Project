@@ -10,13 +10,13 @@ union messageblock {
     uint8_t b[64];
     uint32_t t[16];
     uint64_t s[8];
-}
+};
 
 //Enum to keep track of what stage the program is in.
-enum status(READ, PAD0, PAD1, FINISH);
+enum status {READ, PAD0, PAD1, FINISH};
 
 //Function to calculate the sha of a file passed in
-void sha256();
+void sha256(FILE *f);
 
 //4.1.1 - 4.2.2
 uint32_t sig0(uint32_t x);
@@ -33,17 +33,36 @@ uint32_t Ch(uint32_t x, uint32_t y, uint32_t z);
 uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 
 //To read in the next message block
-int nextMessageblock(FILE *f, union messageblock *MB, enum status *S, uint64_t *nobits);
+int nextMessageblock(FILE *mfile, union messageblock *MB, enum status *S, uint64_t *nobits);
 
 int main(int argc, char *argv[]){
 
-  sha256();
+
+  //ERROR CHECK HERE!
+  //Open the file given 
+  FILE *mfile;
+  mfile = fopen(argv[1], "r");
+
+  //Call the sha with passing in the file
+  sha256(mfile);
+
+  //Close the file
+  fclose(mfile);
 
   return 0;
 }
 
-void sha256(){
+void sha256(FILE *mfile){
   
+  //Current message block
+  union messageblock MB;
+
+  //Number of bits read from the file
+  uint64_t nobits = 0;
+
+  //Current status of the message block
+  enum status S = READ;
+
   //Initialize K
   //4.2.2
   uint32_t K[] = {
@@ -85,34 +104,31 @@ void sha256(){
 	0x5be0cd19
   };
 
-  //Message Block
-  uint32_t MB[16] = {0, 0, 0, 0, 0, 0, 0, 0};
-
   //Initalise variable for forloop
-  int i, t;
+  int i, j;
 
-  for(i = 0; i < 1; i++){
+  while(nextMessageblock(mfile, &MB, &S, &nobits)){
 
-  //PG-22,  W[t] = MB[t] for values between 0 - 15
-  for(t = 0; t < 16; t++){
- 	W[t] = MB[t];
-  }
+    //PG-22,  W[t] = MB[t] for values between 0 - 15
+    for(j = 0; j < 16; j++){
+ 	W[j] = MB.t[j];
+    }
 
-  for(t = 16; t < 64; t++){
-	sig1(W[t-2]) * W[t-7] * sig0(W[t-15]) * W[t-16];
-  }
+    for(j = 16; j < 64; j++){
+	sig1(W[j-2]) * W[j-7] * sig0(W[j-15]) * W[j-16];
+    }
 
-  a = H[0];
-  b = H[1];
-  c = H[2];
-  d = H[3];
-  e = H[4];
-  f = H[5];
-  g = H[6];
-  h = H[7];
+    a = H[0];
+    b = H[1];
+    c = H[2];
+    d = H[3];
+    e = H[4];
+    f = H[5];
+    g = H[6];
+    h = H[7];
 
-  for(t = 0; t < 64; t ++){
-	T1 = h + SIG1(e) + Ch(e, f, g) + K[t] + W[t];
+    for(j = 0; j < 64; j++){
+	T1 = h + SIG1(e) + Ch(e, f, g) + K[j] + W[j];
 	T2 = SIG0(a) + Maj(a, b, c);
 	h = g;
 	g = f;
@@ -122,16 +138,16 @@ void sha256(){
 	c = b;
 	b = a;
 	a = T1 + T2;
-  }
+   }
 
-  H[0] = a + H[0];
-  H[1] = b + H[1];
-  H[2] = c + H[2];
-  H[3] = d + H[3];
-  H[4] = e + H[4];
-  H[5] = f + H[5];
-  H[6] = g + H[6];
-  H[7] = h + H[7];
+    H[0] = a + H[0];
+    H[1] = b + H[1];
+    H[2] = c + H[2];
+    H[3] = d + H[3];
+    H[4] = e + H[4];
+    H[5] = f + H[5];
+    H[6] = g + H[6];
+    H[7] = h + H[7];
 
   }
 
@@ -170,23 +186,24 @@ uint32_t Maj(uint32_t x, uint32_t y, uint32_t z){
   return ((x & y) ^ (x & z) ^ (y & z));
 }
 
-int nextMessageblock(FILE *f, union messageblock *MB, enum status *S, uint64_t *nobits){
+int nextMessageblock(FILE *mfile, union messageblock *MB, enum status *S, uint64_t *nobits){
     //Number of bytes in the current block
     uint64_t nobytes;
 
+    //Loop count
     int i;
 
     //Return to main assuming all blocks are finished
     if(*S == FINISH){
-	return 0;
+      return 0;
     }
 
     //Check if a block needs padding
     if(*S == PAD0 || *S == PAD1){
-	//Initalize the first 56 bits to 0
-	for (i = 0; i < 56; i++){
-	    MB->b[i] = 0x00;
-	}
+    //Initalize the first 56 bits to 0
+        for (i = 0; i < 56; i++){
+            MB->b[i] = 0x00;
+        }
 
 	//Assign the last 64 bits to the number of bits in the file
 	MB->s[7] = *nobits;
@@ -201,12 +218,12 @@ int nextMessageblock(FILE *f, union messageblock *MB, enum status *S, uint64_t *
     }
 	
     //Read in another block of data from the file
-    nobytes = fread(MB->b, 1, 64, f);
-    *nobits = *nobits + (nobytes * 8)
+    nobytes = fread(MB->b, 1, 64, mfile);
+    *nobits = *nobits + (nobytes * 8);
 
     //If a block with less than 55 bytes is found, apply the padding
     if(nobytes < 56){
-	printf("Block with less than 55 bytes found");
+	printf("Block with less than 55 bytes found\n");
 	//Add a 1
 	MB->b[nobytes] = 0x80;
 
@@ -230,7 +247,7 @@ int nextMessageblock(FILE *f, union messageblock *MB, enum status *S, uint64_t *
 	    nobytes = nobytes + 1;
 	    MB->b[nobytes] = 0x00;
 	}
-    } else if(feof(file)){
+    } else if(feof(mfile)){
 	*S = PAD1;
     }
 
