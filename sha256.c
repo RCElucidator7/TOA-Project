@@ -1,9 +1,21 @@
 //Ryan Conway - G00332826
-//SHA256 Project
+//SHA256 Project - Secure Hash Algorithm
 
 #include <stdio.h>
 #include <stdint.h>
 
+//Union defined messageblock
+//Used to access an 8 bit, 32 bit and 64 bit interger.
+union messageblock {
+    uint8_t b[64];
+    uint32_t t[16];
+    uint64_t s[8];
+}
+
+//Enum to keep track of what stage the program is in.
+enum status(READ, PAD0, PAD1, FINISH);
+
+//Function to calculate the sha of a file passed in
 void sha256();
 
 //4.1.1 - 4.2.2
@@ -19,6 +31,9 @@ uint32_t SIG1(uint32_t x);
 
 uint32_t Ch(uint32_t x, uint32_t y, uint32_t z);
 uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
+
+//To read in the next message block
+int nextMessageblock(FILE *f, union messageblock *MB, enum status *S, uint64_t *nobits);
 
 int main(int argc, char *argv[]){
 
@@ -153,4 +168,72 @@ uint32_t Ch(uint32_t x, uint32_t y, uint32_t z){
 
 uint32_t Maj(uint32_t x, uint32_t y, uint32_t z){
   return ((x & y) ^ (x & z) ^ (y & z));
+}
+
+int nextMessageblock(FILE *f, union messageblock *MB, enum status *S, uint64_t *nobits){
+    //Number of bytes in the current block
+    uint64_t nobytes;
+
+    int i;
+
+    //Return to main assuming all blocks are finished
+    if(*S == FINISH){
+	return 0;
+    }
+
+    //Check if a block needs padding
+    if(*S == PAD0 || *S == PAD1){
+	//Initalize the first 56 bits to 0
+	for (i = 0; i < 56; i++){
+	    MB->b[i] = 0x00;
+	}
+
+	//Assign the last 64 bits to the number of bits in the file
+	MB->s[7] = *nobits;
+	*S = FINISH;
+
+	//IF the status is in PAD1, set the first bit of the messageblock to 1
+	if(*S == PAD1){
+		MB->b[0] = 0x80;
+	}
+
+	return 1;
+    }
+	
+    //Read in another block of data from the file
+    nobytes = fread(MB->b, 1, 64, f);
+    *nobits = *nobits + (nobytes * 8)
+
+    //If a block with less than 55 bytes is found, apply the padding
+    if(nobytes < 56){
+	printf("Block with less than 55 bytes found");
+	//Add a 1
+	MB->b[nobytes] = 0x80;
+
+	//Set the rest of the bits in the block to 0
+	while(nobytes < 56) {
+	    nobytes = nobytes + 1;
+	    MB->b[nobytes] = 0x00;
+	}
+	MB->s[7] = *nobits;
+
+	//Set the status to FINISH
+	*S = FINISH;
+    } else if(nobytes < 64) {
+	*S = PAD0;
+
+	//Add a 1
+	MB->b[nobytes] = 0x80;
+
+	//Set the rest of the bits in the block to 0
+	while(nobytes < 64){
+	    nobytes = nobytes + 1;
+	    MB->b[nobytes] = 0x00;
+	}
+    } else if(feof(file)){
+	*S = PAD1;
+    }
+
+    return 1;
+
 }
