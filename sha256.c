@@ -1,8 +1,11 @@
 //Ryan Conway - G00332826
 //SHA256 Project - Secure Hash Algorithm
+//https://www.nist.gov/publications/secure-hash-standard
 
 #include <stdio.h>
 #include <stdint.h>
+#include <errno.h>
+#include <string.h>
 
 //Union defined messageblock
 //Used to access an 8 bit, 32 bit and 64 bit interger.
@@ -14,6 +17,8 @@ union messageblock {
 
 //Enum to keep track of what stage the program is in.
 enum status {READ, PAD0, PAD1, FINISH};
+
+extern int errno;
 
 //Function to calculate the sha of a file passed in
 void sha256(FILE *f);
@@ -37,17 +42,21 @@ int nextMessageblock(FILE *mfile, union messageblock *MB, enum status *S, uint64
 
 int main(int argc, char *argv[]){
 
-
-  //ERROR CHECK HERE!
   //Open the file given 
   FILE *mfile;
   mfile = fopen(argv[1], "r");
 
-  //Call the sha with passing in the file
-  sha256(mfile);
+  //Error check to see if file is null
+  if(mfile == NULL){
+	fprintf(stderr, "Error opening file: %s\n", strerror( errno ));
+  }
+  else {
+	//Call the SHA with passing in the file
+	sha256(mfile);
 
-  //Close the file
-  fclose(mfile);
+	//Close the file
+	fclose(mfile);
+  }
 
   return 0;
 }
