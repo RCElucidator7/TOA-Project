@@ -18,10 +18,15 @@ union messageblock {
 //Enum to keep track of what stage the program is in.
 enum status {READ, PAD0, PAD1, FINISH};
 
+//Error number
 extern int errno;
 
 //Function to calculate the sha of a file passed in
 void sha256(FILE *f);
+
+//Function found at: http://www.firmcodes.com/write-c-program-convert-little-endian-big-endian-integer/
+#define SWAP_UINT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
+#define IS_BIG_ENDIAN (*(uint16_t *)"\0xff" < 0x100)
 
 //4.1.1 - 4.2.2
 uint32_t sig0(uint32_t x);
@@ -160,7 +165,13 @@ void sha256(FILE *mfile){
 
   }
 
-  printf("%x %x %x %x %x %x %x %x \n",  H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
+  //Check if the 
+  if(IS_BIG_ENDIAN){
+    printf("%08x%08x%08x%08x%08x%08x%08x%08x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
+  }
+  else{
+    printf("%08x%08x%08x%08x%08x%08x%08x%08x\n", SWAP_UINT32(H[0]), SWAP_UINT32(H[1]), SWAP_UINT32(H[2]), SWAP_UINT32(H[3]), SWAP_UINT32(H[4]), SWAP_UINT32(H[5]), SWAP_UINT32(H[6]), SWAP_UINT32(H[7]));
+  }
 }
 
 uint32_t sig0(uint32_t x){
