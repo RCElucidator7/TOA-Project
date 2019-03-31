@@ -12,6 +12,31 @@ of Standards and Technology[1].
 
 This Project was developed on a linux vm supplied by the Google Cloud Platform using the C language. [Using the Secure Hash Standard](https://www.nist.gov/publications/secure-hash-standard)[1] we were tasked with recreating the SHA-256 in C using this as  a guide. Lectures and Videos from Dr Ian McLoughin were a massive help throughout delevopment with researching the SHA algorithm and teaching us the fundimentals of C.[2]
 
+### How it Works
+
+- The Program begins with the main() method. This takes in a file name (which must be passed in when running the program).
+- It attempts to open this file while checking for errors. If there are any errors an error message is desplayed and the program exits, if there are no errors it continues.
+- It then executes the sha256() method which is where the computation of the final hash value takes place.
+
+##### sha256()
+- The sha265 method starts with defining all the constants it needs according to the secure hash standard[1] Such as the first 64 prime numbers in hex (K) and the variable which will be used as out output (H). 
+- The method then enters a while loop which calls the function nextMessageblock() (As seen below).
+- In this loop is where the hashing takes place, using the functions shr() and rotr() which will shift and rotate the position of the bytes as needed. 
+- Then, using K, more methods are called to generate out output. (Ch(), Maj(), SIG0(), SIG1(), sig0(), sig1()).
+- Once this is computed the values are assigned in order to the H variable for output.
+- Before these values are output, the program checks if the system is in Big or Little Endian as our desired output must be in big endian. If its a case where the values are Little Endian, a SWAP_UINT32 method is called which switches each hex value from Little to Big Endian.
+- Once the values are output to the screen, the program returns to the main method.
+- In the main method the file is closed and the program exits.
+
+##### nextMessageblock()
+- The nextMessageblock method takes in 4 parameters, the file, a variable of type messageblock, an enum Status, and a uint variables nobits.
+- This method reads in message blocks in 64 byte chunks from the file.
+- It keeps doing this until either a block with less than 56 bytes is read in or a block with between 56 and 64 bytes is read in.
+- In the first case, it pads the remaining bytes with zeros and returns to the sha256 method.
+- In the second case, it pads the remaining bytes with zeros, it sets the status to PAD0 which tells the program to create the next message block and only pad it with zeros.
+- If the block contains exactly 64 bytes, it sets the status to PAD1 which changes the first byte to 1 and pads the rest with zeros.
+- Whens theres no more padding to be done the status is set to finish and it returns to the sha method.
+
 ### Compiling the program:
 
 To compile this program, the user must clone this repository by running:
