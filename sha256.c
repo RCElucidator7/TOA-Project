@@ -110,6 +110,8 @@ void sha256(FILE *mfile){
   uint32_t a, b, c, d, e, f, g, h;
   //Temp Variables
   uint32_t T1, T2;
+  //Initalise variable for forloop
+  int i, j;
 
   //Hash Values 6.2
   //Values - 5.3.3
@@ -123,9 +125,6 @@ void sha256(FILE *mfile){
 	0x1f83d9ab,
 	0x5be0cd19
   };
-
-  //Initalise variable for forloop
-  int i, j;
 
   while(nextMessageblock(mfile, &MB, &S, &nobits)){
 
