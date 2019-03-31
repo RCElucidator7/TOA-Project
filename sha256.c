@@ -16,7 +16,12 @@ union messageblock {
 };
 
 //Enum to keep track of what stage the program is in.
-enum status {READ, PAD0, PAD1, FINISH};
+enum status {
+    READ, 
+    PAD0, 
+    PAD1, 
+    FINISH
+};
 
 //Error number
 extern int errno;
@@ -49,6 +54,7 @@ void sha256(FILE *f);
 #define SWAP_UINT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0xff" < 0x100)
 
+//------Functions used for hashing-------
 //4.1.1 - 4.2.2
 uint32_t sig0(uint32_t x);
 uint32_t sig1(uint32_t x);
@@ -165,13 +171,19 @@ void sha256(FILE *mfile){
 
   }
 
-  //Check if the 
+  printf("\n=======================HASH VALUES======================\n");
+
+  //Check if the system is in big endian, if not convert little to big during output
   if(IS_BIG_ENDIAN){
-    printf("%08x%08x%08x%08x%08x%08x%08x%08x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
+    printf("\nSystem is in Big Endian\n");
+    printf("%x%x%x%x%x%x%x%x\n", H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
   }
   else{
-    printf("%08x%08x%08x%08x%08x%08x%08x%08x\n", SWAP_UINT32(H[0]), SWAP_UINT32(H[1]), SWAP_UINT32(H[2]), SWAP_UINT32(H[3]), SWAP_UINT32(H[4]), SWAP_UINT32(H[5]), SWAP_UINT32(H[6]), SWAP_UINT32(H[7]));
+    printf("\nSystem is in Little Endian - Converting results to Big Endian\n");
+    printf("%x%x%x%x%x%x%x%x\n", SWAP_UINT32(H[0]), SWAP_UINT32(H[1]), SWAP_UINT32(H[2]), SWAP_UINT32(H[3]), SWAP_UINT32(H[4]), SWAP_UINT32(H[5]), SWAP_UINT32(H[6]), SWAP_UINT32(H[7]));
   }
+
+  printf("\n========================================================\n");
 }
 
 uint32_t sig0(uint32_t x){
@@ -183,11 +195,11 @@ uint32_t sig1(uint32_t x){
 }
 
 uint32_t rotr(uint32_t n, uint32_t x){
-  return (x >> n) | (x << (32 - n));
+  return ((x) >> (n)) | ((x) << (32 - (n)));
 }
 
 uint32_t shr(uint32_t n, uint32_t x){
-  return (x >> n);
+  return ((x) >> n);
 }
 
 uint32_t SIG0(uint32_t x){
@@ -199,11 +211,11 @@ uint32_t SIG1(uint32_t x){
 }
 
 uint32_t Ch(uint32_t x, uint32_t y, uint32_t z){
-  return ((x & y) ^ ((!x) & z));
+  return (((x) & (y)) ^ (~(x) & (z)));
 }
 
 uint32_t Maj(uint32_t x, uint32_t y, uint32_t z){
-  return ((x & y) ^ (x & z) ^ (y & z));
+  return ((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z));
 }
 
 int nextMessageblock(FILE *mfile, union messageblock *MB, enum status *S, uint64_t *nobits){
